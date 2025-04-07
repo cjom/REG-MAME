@@ -38,12 +38,9 @@ jobs:
           cat << EOF > free_some_space.sh
           #!/bin/bash
           cd "\$1"
-          find ./ -mindepth 1 -maxdepth 1 -type d -printf "%B\@\\t%p\\n" | sort -g | head -n -5 | cut -f 2- | xargs -d "\\n" -I{} -n1 -rt -- find {} -type f -not \(  -ipath "*config*" -or -iname ".stamp*" -or -iname ".br*" -iname ".files*" -or -iname "Makefile*" -or -iname "*autoconf*" -or -iname "*auto.conf*" -or -iname "CMakeLists*" -or -iname "libogg.la" -or -iname "libvorbis.la" \) -delete
+          find ./ -mindepth 1 -maxdepth 1 -type d -printf "%B\@\\t%p\\n" | sort -g | head -n -5 | cut -f 2- | xargs -d "\\n" -I{} -n1 -rt -- find {} -type f -not \(  -ipath "*config*" -or -iname ".stamp*" -or -iname ".br*" -or -iname ".files*" -or -iname "Makefile*" -or -iname "*autoconf*" -or -iname "*auto.conf*" -or -iname "CMakeLists*" -or -iname "libogg.la" -or -iname "libvorbis.la" \) -delete
           EOF
           chmod 755 free_some_space.sh
-          
-          # DEBUG
-          cat free_some_space.sh
           
           rm -rf ./REG-LINUX ./REG-MAME-COMPILED
           git clone --branch master "https://github.com/REG-Linux/REG-Linux.git" ./REG-LINUX
