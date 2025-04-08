@@ -31,6 +31,20 @@ jobs:
         platform: [bcm2711]
       fail-fast: false
     steps:
+      - name: Free Disk Space (Ubuntu)
+      uses: insightsengineering/disk-space-reclaimer@v1
+      with:
+        # this might remove tools that are actually needed,
+        # if set to "true" but frees about 6 GB
+        tools-cache: false
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        swap-storage: true
+        docker-images: true
+        tools-cache: true
+
       - name: Compile ${{ matrix.platform }}
         id: compile_step
         shell: bash
@@ -43,9 +57,6 @@ jobs:
           done
           EOF
           chmod 755 free_some_space.sh
-          
-          # DEBUG
-          cat free_some_space.sh
           
           rm -rf ./REG-LINUX ./REG-MAME-COMPILED
           git clone --branch master "https://github.com/REG-Linux/REG-Linux.git" ./REG-LINUX
