@@ -27,7 +27,7 @@ jobs:
       dorelease: ${{ false || steps.compile_step.outputs.dorelease }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-slim]
         platform: [bcm2711]
       fail-fast: false
     steps:
