@@ -56,17 +56,22 @@ jobs:
               # Do nothing
             ;;
             *)
-              while : ; do
+              ( while : ; do
+              
+                # DEBUG
+                touch "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/I_AM_HERE"
+              
                 sleep 30
-                while test "$(df -BG --output=avail "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" | tail -1 | grep -o "[0-9]*" | head -1)" -lt 2 ; do
-                  find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" -mindepth 1 -maxdepth 1 -type d -printf "%T@\t%p\n" | sort -g | head -n 1 | cut -f 2- | xargs -r rm -rf
-                done
-                echo "FREE DISK IS: $(df -BG --output=avail "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" | tail -1)"
-              done &
+                if test -e "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build"; then
+                  while test "$(df -BG --output=avail "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" | tail -1 | grep -o "[0-9]*" | head -1)" -lt 2 ; do
+                    find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" -mindepth 1 -maxdepth 1 -type d -printf "%T@\t%p\n" | sort -g | head -n 1 | cut -f 2- | xargs -r rm -rf
+                  done
+                fi
+              done </dev/null >/dev/null ) &
               
               # DEBUG
               echo "SORTED SUBFOLDERS:"
-              find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" -mindepth 1 -maxdepth 1 -type d -printf "%T@\t%p\n"
+              find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/" -mindepth 1 -maxdepth 1 -type d -printf "%T@\t%p\n"
             ;;
           esac
           
