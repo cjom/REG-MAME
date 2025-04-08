@@ -27,36 +27,14 @@ jobs:
       dorelease: ${{ false || steps.compile_step.outputs.dorelease }}
     strategy:
       matrix:
-        os: [ubuntu-slim]
+        os: [ubuntu-latest]
         platform: [bcm2711]
       fail-fast: false
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: insightsengineering/disk-space-reclaimer@v1
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tools-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          swap-storage: true
-          docker-images: true
-
       - name: Compile ${{ matrix.platform }}
         id: compile_step
         shell: bash
         run: |
-          cat << EOF > free_some_space.sh
-          #!/bin/bash
-          cd "\$1"
-          while test "\$(df -BG --output=avail ./ | tail -1 | grep -o "[0-9]*" | head -1)" -lt 7 ; do
-            find ./ -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n 1 | cut -f 2- | xargs -r rm -rf
-          done
-          EOF
-          chmod 755 free_some_space.sh
-          
           rm -rf ./REG-LINUX ./REG-MAME-COMPILED
           git clone --branch master "https://github.com/REG-Linux/REG-Linux.git" ./REG-LINUX
           cd REG-LINUX
@@ -75,11 +53,20 @@ jobs:
           
           case ${{ matrix.platform }} in
             x86_64|x86_64_v3|asahi)
-              # Do not hijack pkg-generic.mk
-              ;;
+              # Do nothing
+            ;;
             *)
-              # After each package is compiled and installed, delete some of the already compiled files
-              sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\t$\{GITHUB_WORKSPACE\}/free_some_space.sh $(BUILD_DIR)\n\tdu -h -s $(PWD)\n\tdf -Ph $(PWD)\n:' buildroot/package/pkg-generic.mk
+              while : ; do
+                sleep 30
+                while test "$(df -BG --output=avail "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" | tail -1 | grep -o "[0-9]*" | head -1)" -lt 2 ; do
+                  find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" -mindepth 1 -maxdepth 1 -type d -printf "%T@\t%p\n" | sort -g | head -n 1 | cut -f 2- | xargs -r rm -rf
+                done
+                echo "FREE DISK IS: $(df -BG --output=avail "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" | tail -1)"
+              done &
+              
+              # DEBUG
+              echo "SORTED SUBFOLDERS:"
+              find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" -mindepth 1 -maxdepth 1 -type d -printf "%T@\t%p\n"
             ;;
           esac
           
