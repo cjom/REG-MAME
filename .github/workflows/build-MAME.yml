@@ -43,7 +43,6 @@ jobs:
           large-packages: true
           swap-storage: true
           docker-images: true
-          tools-cache: true
 
       - name: Compile ${{ matrix.platform }}
         id: compile_step
