@@ -57,13 +57,12 @@ jobs:
             ;;
             *)
               ( while : ; do
-                sleep 30
-                if test -e "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build"; then
-                  while test "$(df -BG --output=avail "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" | tail -1 | grep -o "[0-9]*" | head -1)" -lt 2 ; do
-                    find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" -mindepth 1 -maxdepth 1 -type d -printf "%T@\t%p\n" | sort -g | head -n 1 | cut -f 2- | xargs -r rm -rf
-                  done
-                fi
-              done </dev/null >/dev/null ) &
+                sleep 60
+                echo "CURRENT FREE DISK IS $(df -BG --output=avail "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" | tail -1)"
+                while test "$(df -BG --output=avail "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" | tail -1 | grep -o "[0-9]*" | head -1)" -lt 2 ; do
+                  find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/" -mindepth 1 -maxdepth 1 -type d -not -iname '.*' -printf "%T@\t%p\n" | sort -g | head -n 1 | cut -f 2- | xargs -r rm -rf
+                done
+              done </dev/null ) &
             ;;
           esac
           
