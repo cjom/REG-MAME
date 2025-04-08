@@ -32,18 +32,18 @@ jobs:
       fail-fast: false
     steps:
       - name: Free Disk Space (Ubuntu)
-      uses: insightsengineering/disk-space-reclaimer@v1
-      with:
-        # this might remove tools that are actually needed,
-        # if set to "true" but frees about 6 GB
-        tools-cache: false
-        android: true
-        dotnet: true
-        haskell: true
-        large-packages: true
-        swap-storage: true
-        docker-images: true
-        tools-cache: true
+        uses: insightsengineering/disk-space-reclaimer@v1
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tools-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+          docker-images: true
+          tools-cache: true
 
       - name: Compile ${{ matrix.platform }}
         id: compile_step
