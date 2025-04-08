@@ -59,7 +59,7 @@ jobs:
               ( while : ; do
               
                 # DEBUG
-                touch "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/I_AM_HERE"
+                mkdir -p "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/I_AM_HERE"
               
                 sleep 30
                 if test -e "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build"; then
@@ -71,7 +71,7 @@ jobs:
               
               # DEBUG
               echo "SORTED SUBFOLDERS:"
-              find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/" -mindepth 1 -maxdepth 1 -type d -printf "%T@\t%p\n"
+              find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/" -mindepth 1 -maxdepth 1 -type d -printf "%T@\t%p\n" | sort -g
             ;;
           esac
           
