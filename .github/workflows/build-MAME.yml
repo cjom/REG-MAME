@@ -57,7 +57,7 @@ jobs:
             ;;
             *)
               # After each package is compiled and installed, keep only newest 9
-              sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tfind \$\$(BUILD_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -9 | cut -f 2- | xargs -r rm -rf \n:' buildroot/package/pkg-generic.mk
+              sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tfind \$(BUILD_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -9 | cut -f 2- | xargs -r rm -rf \n:' buildroot/package/pkg-generic.mk
             ;;
           esac
           
