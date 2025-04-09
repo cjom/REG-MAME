@@ -71,8 +71,8 @@ jobs:
           sed -i s/#BR2_PACKAGE_MAME_BUILD_FROM_SOURCE=y/BR2_PACKAGE_MAME_BUILD_FROM_SOURCE=y/ configs/reglinux-board.common
           
           # Limit the number of jobs because of RAM limits
-          sed -i s/MAME_MAX_JOBS = 32/MAME_MAX_JOBS = 4/ package/emulators/mame/mame.mk
-          sed -i s/LIBRETRO_MAME_MAX_JOBS = 32/LIBRETRO_MAME_MAX_JOBS = 4/ package/emulators/libretro/libretro-mame/libretro-mame.mk
+          sed -i 's/MAME_MAX_JOBS = 32/MAME_MAX_JOBS = 4/' package/emulators/mame/mame.mk
+          sed -i 's/LIBRETRO_MAME_MAX_JOBS = 32/LIBRETRO_MAME_MAX_JOBS = 4/' package/emulators/libretro/libretro-mame/libretro-mame.mk
           
           # Create built output directory
           mkdir -p "${GITHUB_WORKSPACE}/REG-MAME-COMPILED"
