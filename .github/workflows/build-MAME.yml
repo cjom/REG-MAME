@@ -21,14 +21,14 @@ jobs:
   build:
     name: Build REG-linux MAME
     runs-on: ${{ matrix.os }}
-    container: reglinux/reglinux-build:latest
     outputs:
       mameversion: ${{ steps.compile_step.outputs.mameversion }}
       dorelease: ${{ false || steps.compile_step.outputs.dorelease }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24.04-arm]
         platform: [bcm2711]
+        exclude:
       fail-fast: false
     steps:
       - name: Compile ${{ matrix.platform }}
@@ -56,8 +56,8 @@ jobs:
               # Do nothing
             ;;
             *)
-              # After each package is compiled and installed, keep only newest 9
-              sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tfind \$(BUILD_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -9 | cut -f 2- | xargs -r rm -rf \n:' buildroot/package/pkg-generic.mk
+              # After each package is compiled and installed, keep only newest 3
+              sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tfind \$(BUILD_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -3 | cut -f 2- | xargs -r rm -rf \n:' buildroot/package/pkg-generic.mk
             ;;
           esac
           
@@ -81,8 +81,7 @@ jobs:
             # Build
             ${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh ${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}
             CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-${{ matrix.platform }}_defconfig
-            CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot mame
-            CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot libretro-mame
+            CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot mame libretro-mame
             
             # DEBUG
             find ${GITHUB_WORKSPACE}/REG-LINUX/buildroot/ -type d -iname '*mame*' -or -iname '*libretro*'
