@@ -65,6 +65,7 @@ jobs:
           # Limit the number of jobs because of RAM limits
           sed -i 's/MAME_MAX_JOBS = 32/MAME_MAX_JOBS = 2/' package/emulators/mame/mame.mk
           sed -i 's/LIBRETRO_MAME_MAX_JOBS = 32/LIBRETRO_MAME_MAX_JOBS = 2/' package/emulators/libretro/libretro-mame/libretro-mame.mk
+          sed -i 's/OPTIMIZE=3/OPTIMIZE=2/' package/emulators/mame/mame.mk
           
           # Create built output directory
           mkdir -p "${GITHUB_WORKSPACE}/REG-MAME-COMPILED"
