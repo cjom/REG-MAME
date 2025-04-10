@@ -50,14 +50,7 @@ jobs:
           echo "mameversion=${mameversion}" >> "$GITHUB_OUTPUT"
           echo "mameversion=${mameversion}"
           
-          case ${{ matrix.platform }} in
-            x86_64|x86_64_v3|asahi)
-              # Do nothing
-            ;;
-            *)
-              sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tdf -BG --output=avail ./ \n:' buildroot/package/pkg-generic.mk
-            ;;
-          esac
+          sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tdf -BG --output=avail ./ \n:' buildroot/package/pkg-generic.mk
           
           # After each downloaded package is extracted, delete older and keep latest 3
           sed -i 's:(TAR_OPTIONS) -:(TAR_OPTIONS) - \&\& find \$\$(DL_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -2 | cut -f 2- | xargs -r rm -rf :' buildroot/package/pkg-generic.mk
@@ -70,8 +63,8 @@ jobs:
           sed -i s/#BR2_PACKAGE_MAME_BUILD_FROM_SOURCE=y/BR2_PACKAGE_MAME_BUILD_FROM_SOURCE=y/ configs/reglinux-board.common
           
           # Limit the number of jobs because of RAM limits
-          sed -i 's/MAME_MAX_JOBS = 32/MAME_MAX_JOBS = 1/' package/emulators/mame/mame.mk
-          sed -i 's/LIBRETRO_MAME_MAX_JOBS = 32/LIBRETRO_MAME_MAX_JOBS = 1/' package/emulators/libretro/libretro-mame/libretro-mame.mk
+          sed -i 's/MAME_MAX_JOBS = 32/MAME_MAX_JOBS = 2/' package/emulators/mame/mame.mk
+          sed -i 's/LIBRETRO_MAME_MAX_JOBS = 32/LIBRETRO_MAME_MAX_JOBS = 2/' package/emulators/libretro/libretro-mame/libretro-mame.mk
           
           # Create built output directory
           mkdir -p "${GITHUB_WORKSPACE}/REG-MAME-COMPILED"
