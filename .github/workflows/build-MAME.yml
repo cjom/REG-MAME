@@ -69,7 +69,15 @@ jobs:
           echo "mameversion=${mameversion}" >> "$GITHUB_OUTPUT"
           echo "mameversion=${mameversion}"
           
-          sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tdf -BG --output=avail ./ \n:' buildroot/package/pkg-generic.mk
+          case ${{ matrix.platform }} in
+            x86_64|x86_64_v3|asahi)
+              # Do nothing
+            ;;
+            *)
+              # After each package is compiled and installed, keep only newest 10
+              sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tfind \$(BUILD_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -10 | cut -f 2- | xargs -r rm -rf \n\tdf -BG --output=avail ./ \n:' buildroot/package/pkg-generic.mk
+            ;;
+          esac
           
           # After each downloaded package is extracted, delete older and keep latest 3
           sed -i 's:(TAR_OPTIONS) -:(TAR_OPTIONS) - \&\& find \$\$(DL_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -2 | cut -f 2- | xargs -r rm -rf :' buildroot/package/pkg-generic.mk
