@@ -1,0 +1,23 @@
+--- a/package/emulators/libretro/libretro-mame/libretro-mame.mk
++++ b/package/emulators/libretro/libretro-mame/libretro-mame.mk
+@@ -18,14 +18,15 @@
+ endif
+ 
+ # Limit number of jobs not to eat too much RAM....
+-LIBRETRO_MAME_MAX_JOBS = 32
++LIBRETRO_MAME_MAX_JOBS = 5
+ LIBRETRO_MAME_JOBS = $(shell if [ $(PARALLEL_JOBS) -gt $(LIBRETRO_MAME_MAX_JOBS) ]; then echo $(LIBRETRO_MAME_MAX_JOBS); else echo $(PARALLEL_JOBS); fi)
+ 
+-LIBRETRO_MAME_EXTRA_ARGS += PTR64=1
+-ifeq ($(BR2_x86_64),y)
+-LIBRETRO_MAME_EXTRA_ARGS += LIBRETRO_CPU=x86_64 PLATFORM=x86_64
++ifeq ($(BR2_arm),y)
++LIBRETRO_MAME_EXTRA_ARGS += PTR64=0 LIBRETRO_CPU=arm PLATFORM=arm
++else ifeq ($(BR2_x86_64),y)
++LIBRETRO_MAME_EXTRA_ARGS += PTR64=1 LIBRETRO_CPU=x86_64 PLATFORM=x86_64
+ else ifeq ($(BR2_RISCV_64),y)
+-LIBRETRO_MAME_EXTRA_ARGS += LIBRETRO_CPU=riscv64 PLATFORM=riscv64
++LIBRETRO_MAME_EXTRA_ARGS += PTR64=1 LIBRETRO_CPU=riscv64 PLATFORM=riscv64
+ else ifeq ($(BR2_aarch64),y)
+ LIBRETRO_MAME_EXTRA_ARGS += PTR64=1 LIBRETRO_CPU=arm64 PLATFORM=arm64
+ LIBRETRO_MAME_ARCHOPTS += -D__aarch64__
