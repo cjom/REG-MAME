@@ -41,7 +41,7 @@ jobs:
           git submodule init
           git submodule update
           rm -rf .git .github buildroot/.github buildroot/.gitlab
-          cat <<EOF > package/emulators/libretro/libretro-mame/libretro-mame-armhf.patch
+          patch -u -p0 <<EOF
           --- a/package/emulators/libretro/libretro-mame/libretro-mame.mk
           +++ b/package/emulators/libretro/libretro-mame/libretro-mame.mk
           @@ -18,14 +18,15 @@
@@ -74,7 +74,7 @@ jobs:
           
           
           # Merge buildroot patches
-          CUSTOM_DIR=${GITHUB_WORKSPACE}/REG-LINUX/custom BUILDROOT_DIR=${GITHUB_WORKSPACE}/REG-LINUX/buildroot ${GITHUB_WORKSPACE}/REG-LINUX/scripts/linux/mergeToBR.sh
+          CUSTOM_DIR="${GITHUB_WORKSPACE}/REG-LINUX/custom" BUILDROOT_DIR="${GITHUB_WORKSPACE}/REG-LINUX/buildroot" "${GITHUB_WORKSPACE}/REG-LINUX/scripts/linux/mergeToBR.sh"
           
           # Version
           mameversion=$(cat package/emulators/mame/mame.mk | grep GroovyMAME | grep Version | cut -d " " -f 4)
@@ -134,19 +134,23 @@ jobs:
           # Enable the flag to build MAME from source
           sed -i s/#BR2_PACKAGE_MAME_BUILD_FROM_SOURCE=y/BR2_PACKAGE_MAME_BUILD_FROM_SOURCE=y/ configs/reglinux-board.common
           
+          # Delete last package build sub folder to force recompile
+          find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build" -mindepth 1 -maxdepth 1 -type d ! -exec teste -e "{}/.stamp_installed" \; -exec rm -rf "{}" \;
+          
           # Build
-          ${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh ${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}
-          CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-${{ matrix.platform }}_defconfig
-          CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot libretro-mame
+          "${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh" "${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}"
+          CCACHE_DISABLE=1 make BR2_EXTERNAL="${GITHUB_WORKSPACE}/REG-LINUX" -C "${GITHUB_WORKSPACE}/REG-LINUX/buildroot" reglinux-${{ matrix.platform }}_defconfig
+          CCACHE_DISABLE=1 make BR2_EXTERNAL="${GITHUB_WORKSPACE}/REG-LINUX" -C "${GITHUB_WORKSPACE}/REG-LINUX/buildroot" libretro-mame
           
           # Create package
-          cd ${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/target || exit 1
+          cd "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/target" || exit 1
           tar czf  "${GITHUB_WORKSPACE}/reglinux-mame-${{ steps.prepare_step.outputs.mameversion }}-${{ matrix.platform }}.tar.gz" usr/lib/libretro/mame_libretro.so usr/share/lr-mame
           
           echo "dorelease=${{ true }}" >> "$GITHUB_OUTPUT"
 
       - name: Save cache ${{ matrix.platform }}
         id: save_cache
+        if: ${{ steps.prepare_step.outputs.docompile && ! cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: REG-LINUX/buildroot/output
