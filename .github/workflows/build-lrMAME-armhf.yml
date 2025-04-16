@@ -67,12 +67,6 @@ jobs:
            LIBRETRO_MAME_ARCHOPTS += -D__aarch64__
           EOF
           
-          
-          # DEBUG
-          ls -la package/emulators/libretro/libretro-mame/
-          cat package/emulators/libretro/libretro-mame/libretro-mame-armhf.patch
-          
-          
           # Merge buildroot patches
           CUSTOM_DIR="${GITHUB_WORKSPACE}/REG-LINUX/custom" BUILDROOT_DIR="${GITHUB_WORKSPACE}/REG-LINUX/buildroot" "${GITHUB_WORKSPACE}/REG-LINUX/scripts/linux/mergeToBR.sh"
           
