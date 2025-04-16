@@ -1,0 +1,125 @@
+name: Build REG-linux GroovyMAME
+
+on:
+  workflow_dispatch:
+
+concurrency:
+    group: ${{ github.repository }}-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  LANG: en_US.UTF-8
+  LANGUAGE: en_US:en
+  LC_ALL: en_US.UTF-8
+  FORCE_UNSAFE_CONFIGURE: 1
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    name: Build REG-linux GroovyMAME
+    runs-on: ${{ matrix.os }}
+    outputs:
+      mameversion: ${{ steps.compile_step.outputs.mameversion }}
+      docache: ${{ false || steps.compile_step.outputs.docache }}
+    strategy:
+      matrix:
+        # asahi, x86_64 and x86_64_v3 are compiled on next stage (when compiling lr-mame) using self-hosted runner
+        os: [ubuntu-24.04-arm]
+        platform: [bcm2711, bcm2712, h5, jh7110, rk3326, rk3399, rk3588, s905gen3, s922x]
+      fail-fast: false
+    steps:
+      - name: Compile ${{ matrix.platform }}
+        id: compile_step
+        shell: bash
+        run: |
+          rm -rf ./REG-LINUX
+          git clone --branch master "https://github.com/REG-Linux/REG-Linux.git" ./REG-LINUX
+          cd REG-LINUX
+          git submodule init
+          git submodule update
+          rm -rf .git .github buildroot/.github buildroot/.gitlab
+          
+          # Merge buildroot patches
+          CUSTOM_DIR=${GITHUB_WORKSPACE}/REG-LINUX/custom BUILDROOT_DIR=${GITHUB_WORKSPACE}/REG-LINUX/buildroot ${GITHUB_WORKSPACE}/REG-LINUX/scripts/linux/mergeToBR.sh
+          
+          # Version
+          mameversion=$(cat package/emulators/mame/mame.mk | grep GroovyMAME | grep Version | cut -d " " -f 4)
+          [[ "$(cat package/emulators/libretro/libretro-mame/libretro-mame.mk | grep LIBRETRO_MAME_VERSION | grep lrmame | cut -d " " -f 3 | sed s/lrmame//g | sed s/0/0\./)" != "${mameversion}" ]] && echo "MAME and libretro-mame versions do not match, aborting!" && exit 1
+          echo "mameversion=${mameversion}" >> "$GITHUB_OUTPUT"
+          echo "mameversion=${mameversion}"
+          
+          # Get file if already released and avoid compiling again
+          wget -q -nd -P "${GITHUB_WORKSPACE}/" "https://github.com/${GITHUB_REPOSITORY}/releases/download/${mameversion}/reglinux-mame-${mameversion}-${{ matrix.platform }}.tar.gz" || ${{ true }}
+          if ! gzip -qt "${GITHUB_WORKSPACE}/reglinux-mame-${mameversion}-${{ matrix.platform }}.tar.gz"
+          then
+            # Free disk space and set big swap before compiling
+            sudo apt-get -y remove '*azure*' '*firefox*' '*dotnet*' '*php*' '*cloud*' && sudo apt-get -y autoremove && sudo apt-get -y clean && sudo rm -rf /var/lib/apt/lists/*
+            export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
+            echo "Swap file: $SWAP_FILE"
+            if [ -z "$SWAP_FILE" ]; then
+              SWAP_FILE=/swapfile
+            else
+              sudo swapoff $SWAP_FILE
+              sudo rm $SWAP_FILE
+            fi
+            case ${{ matrix.platform }} in
+              jh7110)
+                sudo fallocate -l 18G $SWAP_FILE
+              ;;
+              *)
+                sudo fallocate -l 24G $SWAP_FILE
+              ;;
+            esac
+            sudo chmod 600 $SWAP_FILE
+            sudo mkswap $SWAP_FILE
+            sudo swapon $SWAP_FILE
+            echo "Memory and swap:"
+            free -h
+            swapon --show
+            df -BG --output=avail ./
+            
+            # After each package is compiled and installed, keep only newest 4
+            sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tfind \$(BUILD_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -4 | cut -f 2- | xargs -d "\\n" -I\{\} -n1 -rt -- find \{\} -type f -not \\\( -iname ".stamp*" -or -iname ".br*" -or -iname ".files*" -or -iname ".applied*" -or -iname "Makefile*" -or -iname "*cmake*" -or -ipath "*conf*" \\\) -delete \n\tdf -BG --output=avail ./ \n:' buildroot/package/pkg-generic.mk
+            
+            # After each downloaded package is extracted, delete older and keep latest 2
+            sed -i 's:(TAR_OPTIONS) -:(TAR_OPTIONS) - \&\& find \$\$(DL_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -2 | cut -f 2- | xargs -r rm -rf :' buildroot/package/pkg-generic.mk
+            
+            # Disable CCACHE and BR2_PER_PACKAGE_DIRECTORIES
+            sed -i "/BR2_CCACHE/d" configs/reglinux-board.common
+            sed -i "/BR2_PER_PACKAGE_DIRECTORIES/d" configs/* Makefile
+            
+            # Enable the flag to build MAME from source
+            sed -i s/#BR2_PACKAGE_MAME_BUILD_FROM_SOURCE=y/BR2_PACKAGE_MAME_BUILD_FROM_SOURCE=y/ configs/reglinux-board.common
+            
+            # Limit the number of jobs because of RAM limits
+            case ${{ matrix.platform }} in
+              jh7110)
+                sed -i 's/MAME_MAX_JOBS = 32/MAME_MAX_JOBS = 3/' package/emulators/mame/mame.mk
+                sed -i 's/LIBRETRO_MAME_MAX_JOBS = 32/LIBRETRO_MAME_MAX_JOBS = 3/' package/emulators/libretro/libretro-mame/libretro-mame.mk
+              ;;
+              *)
+                sed -i 's/MAME_MAX_JOBS = 32/MAME_MAX_JOBS = 5/' package/emulators/mame/mame.mk
+                sed -i 's/LIBRETRO_MAME_MAX_JOBS = 32/LIBRETRO_MAME_MAX_JOBS = 5/' package/emulators/libretro/libretro-mame/libretro-mame.mk
+              ;;
+            esac
+            
+            # Build
+            ${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh ${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}
+            CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-${{ matrix.platform }}_defconfig
+            CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot mame
+            
+            # Delete unneeded files to make cache smaller
+            find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build" -type f -not \( -iname ".stamp*" -or -iname ".br*" -or -iname ".files*" -or -iname ".applied*" -or -iname "Makefile*" -or -iname "*cmake*" -or -ipath "*conf*" \) -delete
+            echo "docache=${{ true }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save cache ${{ matrix.platform }}
+        id: save_cache
+        if: ${{ steps.compile_step.outputs.docache }}
+        uses: actions/cache/save@v4
+        with:
+          path: REG-LINUX/buildroot/output
+          key: ${{ matrix.os }}-${{ matrix.platform }}-${{ steps.compile_step.outputs.mameversion }}-${{ github.run_id }}
