@@ -76,10 +76,10 @@ jobs:
            # Limit number of jobs not to eat too much RAM....
           -MAME_MAX_JOBS = 32
           +MAME_MAX_JOBS = 5
-           MAME_JOBS = $(shell if [ $(PARALLEL_JOBS) -gt $(MAME_MAX_JOBS) ]; then echo $(MAME_MAX_JOBS); else echo $(PARALLEL_JOBS); fi)
+           MAME_JOBS = \$(shell if [ \$(PARALLEL_JOBS) -gt \$(MAME_MAX_JOBS) ]; then echo \$(MAME_MAX_JOBS); else echo \$(PARALLEL_JOBS); fi)
           
           -# Set PTR64 always on we do not build for 32-bit architectures
-          +ifeq ($(BR2_arm),y)
+          +ifeq (\$(BR2_arm),y)
           +MAME_CROSS_OPTS += PTR64=0
           +else
            MAME_CROSS_OPTS += PTR64=1
@@ -91,13 +91,13 @@ jobs:
            endif
           
            # Define cross-architecture, adjust DRC backend
-          -ifeq ($(BR2_x86_64),y)
-          +ifeq ($(BR2_arm),y)
+          -ifeq (\$(BR2_x86_64),y)
+          +ifeq (\$(BR2_arm),y)
           +MAME_CROSS_ARCH = arm
           +MAME_CFLAGS += -mcpu=cortex-a7 -mtune=cortex-a7
-          +else ifeq ($(BR2_x86_64),y)
+          +else ifeq (\$(BR2_x86_64),y)
            MAME_CROSS_ARCH = x86_64
-           else ifeq ($(BR2_aarch64),y)
+           else ifeq (\$(BR2_aarch64),y)
            MAME_CROSS_ARCH = arm64
           EOF
           
