@@ -41,7 +41,7 @@ jobs:
           git submodule init
           git submodule update
           rm -rf .git .github buildroot/.github buildroot/.gitlab
-          patch -u -p0 <<EOF
+          patch -u -p1 <<EOF
           --- a/package/emulators/libretro/libretro-mame/libretro-mame.mk
           +++ b/package/emulators/libretro/libretro-mame/libretro-mame.mk
           @@ -18,14 +18,15 @@
