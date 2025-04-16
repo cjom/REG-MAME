@@ -1,4 +1,4 @@
-name: Build REG-linux lrMAME-armhf
+name: Build REG-linux MAME-armhf
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ env:
 
 jobs:
   build:
-    name: Build REG-linux lrMAME-armhf
+    name: Build REG-linux MAME-armhf
     runs-on: ${{ matrix.os }}
     outputs:
       mameversion: ${{ steps.prepare_step.outputs.mameversion }}
@@ -134,11 +134,11 @@ jobs:
           # Build
           "${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh" "${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}"
           CCACHE_DISABLE=1 make BR2_EXTERNAL="${GITHUB_WORKSPACE}/REG-LINUX" -C "${GITHUB_WORKSPACE}/REG-LINUX/buildroot" reglinux-${{ matrix.platform }}_defconfig
-          CCACHE_DISABLE=1 make BR2_EXTERNAL="${GITHUB_WORKSPACE}/REG-LINUX" -C "${GITHUB_WORKSPACE}/REG-LINUX/buildroot" libretro-mame
+          CCACHE_DISABLE=1 make BR2_EXTERNAL="${GITHUB_WORKSPACE}/REG-LINUX" -C "${GITHUB_WORKSPACE}/REG-LINUX/buildroot" mame libretro-mame
           
           # Create package
           cd "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/target" || exit 1
-          tar czf  "${GITHUB_WORKSPACE}/reglinux-mame-${{ steps.prepare_step.outputs.mameversion }}-${{ matrix.platform }}.tar.gz" usr/lib/libretro/mame_libretro.so usr/share/lr-mame
+          tar czf  "${GITHUB_WORKSPACE}/reglinux-mame-${{ steps.prepare_step.outputs.mameversion }}-${{ matrix.platform }}.tar.gz" usr/bin/mame usr/share/mame usr/lib/libretro/mame_libretro.so usr/share/lr-mame
           
           echo "dorelease=${{ true }}" >> "$GITHUB_OUTPUT"
 
@@ -159,4 +159,4 @@ jobs:
           tag_name: ${{ steps.prepare_step.outputs.mameversion }}
           prerelease: false
           generate_release_notes: true
-          name: lr-MAME-armhf ${{ steps.prepare_step.outputs.mameversion }}
+          name: MAME-armhf ${{ steps.prepare_step.outputs.mameversion }}
