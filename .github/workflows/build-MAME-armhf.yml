@@ -41,6 +41,57 @@ jobs:
           git submodule init
           git submodule update
           rm -rf .git .github buildroot/.github buildroot/.gitlab
+          
+          # Merge buildroot patches
+          CUSTOM_DIR="${GITHUB_WORKSPACE}/REG-LINUX/custom" BUILDROOT_DIR="${GITHUB_WORKSPACE}/REG-LINUX/buildroot" "${GITHUB_WORKSPACE}/REG-LINUX/scripts/linux/mergeToBR.sh"
+          
+          # Version
+          mameversion=$(cat package/emulators/mame/mame.mk | grep GroovyMAME | grep Version | cut -d " " -f 4)
+          echo "mameversion=${mameversion}" >> "$GITHUB_OUTPUT"
+          echo "mameversion=${mameversion}"
+          
+          # Get file if already released and avoid compiling again
+          wget -q -nd -P "${GITHUB_WORKSPACE}/" "https://github.com/${GITHUB_REPOSITORY}/releases/download/${mameversion}/reglinux-mame-${mameversion}-${{ matrix.platform }}.tar.gz" || ${{ true }}
+          if ! gzip -qt "${GITHUB_WORKSPACE}/reglinux-mame-${mameversion}-${{ matrix.platform }}.tar.gz"
+          then
+            echo "docompile=${{ true }}" >> "$GITHUB_OUTPUT"
+            
+            # Free disk space and set big swap before compiling
+            sudo apt-get -y remove '*azure*' '*firefox*' '*dotnet*' '*php*' '*cloud*' && sudo apt-get -y autoremove && sudo apt-get -y clean && sudo rm -rf /var/lib/apt/lists/*
+            export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
+            echo "Swap file: $SWAP_FILE"
+            if [ -z "$SWAP_FILE" ]; then
+              SWAP_FILE=/swapfile
+            else
+              sudo swapoff $SWAP_FILE
+              sudo rm $SWAP_FILE
+            fi
+            sudo fallocate -l 24G $SWAP_FILE
+            sudo chmod 600 $SWAP_FILE
+            sudo mkswap $SWAP_FILE
+            sudo swapon $SWAP_FILE
+            echo "Memory and swap:"
+            free -h
+            swapon --show
+            df -BG --output=avail ./
+          fi
+
+      - name: Restore ${{ matrix.platform }}
+        id: restore_cache
+        if: ${{ steps.prepare_step.outputs.docompile }}
+        uses: actions/cache/restore@v4
+        with:
+          path: REG-LINUX/buildroot/output
+          key: ${{ matrix.os }}-${{ matrix.platform }}-${{ steps.prepare_step.outputs.mameversion }}
+
+      - name: Compile ${{ matrix.platform }}
+        id: compile_step
+        if: ${{ steps.prepare_step.outputs.docompile }}
+        shell: bash
+        run: |
+          cd REG-LINUX
+          rm -f board/broadcom/bcm2836/patches/mame/switchres-no-xrandr.patch
+          
           patch -u -p1 <<EOF
           --- a/package/emulators/libretro/libretro-mame/libretro-mame.mk
           +++ b/package/emulators/libretro/libretro-mame/libretro-mame.mk
@@ -100,54 +151,6 @@ jobs:
            else ifeq (\$(BR2_aarch64),y)
            MAME_CROSS_ARCH = arm64
           EOF
-          
-          # Merge buildroot patches
-          CUSTOM_DIR="${GITHUB_WORKSPACE}/REG-LINUX/custom" BUILDROOT_DIR="${GITHUB_WORKSPACE}/REG-LINUX/buildroot" "${GITHUB_WORKSPACE}/REG-LINUX/scripts/linux/mergeToBR.sh"
-          
-          # Version
-          mameversion=$(cat package/emulators/mame/mame.mk | grep GroovyMAME | grep Version | cut -d " " -f 4)
-          echo "mameversion=${mameversion}" >> "$GITHUB_OUTPUT"
-          echo "mameversion=${mameversion}"
-          
-          # Get file if already released and avoid compiling again
-          wget -q -nd -P "${GITHUB_WORKSPACE}/" "https://github.com/${GITHUB_REPOSITORY}/releases/download/${mameversion}/reglinux-mame-${mameversion}-${{ matrix.platform }}.tar.gz" || ${{ true }}
-          if ! gzip -qt "${GITHUB_WORKSPACE}/reglinux-mame-${mameversion}-${{ matrix.platform }}.tar.gz"
-          then
-            echo "docompile=${{ true }}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Restore ${{ matrix.platform }}
-        id: restore_cache
-        if: ${{ steps.prepare_step.outputs.docompile }}
-        uses: actions/cache/restore@v4
-        with:
-          path: REG-LINUX/buildroot/output
-          key: ${{ matrix.os }}-${{ matrix.platform }}-${{ steps.prepare_step.outputs.mameversion }}
-
-      - name: Compile ${{ matrix.platform }}
-        id: compile_step
-        if: ${{ steps.prepare_step.outputs.docompile }}
-        shell: bash
-        run: |
-          cd REG-LINUX
-          # Free disk space and set big swap before compiling
-          sudo apt-get -y remove '*azure*' '*firefox*' '*dotnet*' '*php*' '*cloud*' && sudo apt-get -y autoremove && sudo apt-get -y clean && sudo rm -rf /var/lib/apt/lists/*
-          export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
-          echo "Swap file: $SWAP_FILE"
-          if [ -z "$SWAP_FILE" ]; then
-            SWAP_FILE=/swapfile
-          else
-            sudo swapoff $SWAP_FILE
-            sudo rm $SWAP_FILE
-          fi
-          sudo fallocate -l 24G $SWAP_FILE
-          sudo chmod 600 $SWAP_FILE
-          sudo mkswap $SWAP_FILE
-          sudo swapon $SWAP_FILE
-          echo "Memory and swap:"
-          free -h
-          swapon --show
-          df -BG --output=avail ./
           
           # After each package is compiled and installed, keep only newest 4
           sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tfind \$(BUILD_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -4 | cut -f 2- | xargs -d "\\n" -I\{\} -n1 -rt -- find \{\} -type f -not \\\( -iname ".stamp*" -or -iname ".br*" -or -iname ".files*" -or -iname ".applied*" -or -iname "Makefile*" -or -iname "*cmake*" -or -ipath "*conf*" \\\) -delete \n\tdf -BG --output=avail ./ \n:' buildroot/package/pkg-generic.mk
